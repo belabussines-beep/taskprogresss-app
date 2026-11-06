@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskProgress - Colaboración en Tiempo Real</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & App Name -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                        <i class="fa-solid fa-cloud text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 id="headerAppName" class="text-base font-bold bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
+                            TaskProgress Cloud
+                        </h1>
+                        <p class="text-[11px] text-slate-400 flex items-center gap-1.5">
+                            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span id="headerUserName">Usuario Equipo</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden md:flex items-center space-x-1 bg-slate-950/60 p-1.5 rounded-2xl border border-slate-800/80">
+                    <button onclick="switchTab('tasksTab')" id="tab-tasksTab" class="nav-tab text-xs font-semibold px-4 py-2 rounded-xl transition bg-indigo-600 text-white shadow">
+                        <i class="fa-solid fa-list-check mr-1.5"></i> Tareas
+                    </button>
+                    <button onclick="switchTab('foldersTab')" id="tab-foldersTab" class="nav-tab text-xs font-semibold px-4 py-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition">
+                        <i class="fa-solid fa-folder-tree mr-1.5"></i> Carpetas / Secciones
+                    </button>
+                </nav>
+
+                <!-- Actions & Profile Config -->
+                <div class="flex items-center space-x-3">
+                    <div id="overdueBadgeContainer" class="hidden">
+                        <span class="inline-flex items-center gap-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 animate-pulse">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span id="overdueCountText">0 Retrasos</span>
+                        </span>
+                    </div>
+
+                    <button onclick="openModal('profileModal')" class="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/50 transition">
+                        <i class="fa-solid fa-user-gear text-sm"></i>
+                    </button>
+
+                    <button onclick="openModal('newTaskModal')" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow-lg shadow-indigo-600/25 active:scale-95">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <span class="hidden sm:inline">Nueva Tarea</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation Bottom Bar -->
+        <div class="md:hidden flex border-t border-slate-800 bg-slate-900 px-4 py-2 justify-around">
+            <button onclick="switchTab('tasksTab')" class="text-xs font-semibold text-indigo-400 flex flex-col items-center gap-1">
+                <i class="fa-solid fa-list-check text-base"></i> Tareas
+            </button>
+            <button onclick="switchTab('foldersTab')" class="text-xs font-semibold text-slate-400 flex flex-col items-center gap-1">
+                <i class="fa-solid fa-folder-tree text-base"></i> Carpetas
+            </button>
+        </div>
+    </header>
+
+    <!-- Global Overdue Alert Banner -->
+    <div id="globalOverdueBanner" class="hidden bg-gradient-to-r from-rose-900/80 via-rose-950 to-slate-900 border-b border-rose-800/50 px-4 py-3 text-rose-200 text-sm">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="flex h-3 w-3 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                </span>
+                <p id="globalAlertMessage">¡Atención! Hay tareas en línea que han superado el tiempo estimado.</p>
+            </div>
+            <button onclick="switchTab('tasksTab'); filterTasks('overdue');" class="text-xs bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-semibold px-3 py-1 rounded-lg border border-rose-500/30 transition">
+                Ver tareas retrasadas
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN VIEW CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+
+        <!-- TAB 1: TASKS VIEW -->
+        <div id="tasksTab" class="tab-content space-y-6">
+            <!-- Metrics Summary Dashboard -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">Total Tareas</p>
+                        <h3 id="statTotal" class="text-2xl font-bold text-white mt-1">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                </div>
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">En Progreso</p>
+                        <h3 id="statActive" class="text-2xl font-bold text-indigo-400 mt-1">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                        <i class="fa-solid fa-spinner"></i>
+                    </div>
+                </div>
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">Completadas</p>
+                        <h3 id="statCompleted" class="text-2xl font-bold text-emerald-400 mt-1">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">Vencidas / Retrasadas</p>
+                        <h3 id="statOverdue" class="text-2xl font-bold text-rose-400 mt-1">0</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
+                        <i class="fa-solid fa-clock font-bold"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters, Search & Folder Selectors -->
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-900/40 p-3 rounded-2xl border border-slate-800/60">
+                <div class="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
+                    <!-- State Filters -->
+                    <button onclick="filterTasks('all')" id="filter-all" class="filter-btn text-xs font-semibold px-4 py-2 rounded-xl transition bg-indigo-600 text-white shadow">
+                        Todas
+                    </button>
+                    <button onclick="filterTasks('active')" id="filter-active" class="filter-btn text-xs font-semibold px-4 py-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
+                        Activas
+                    </button>
+                    <button onclick="filterTasks('overdue')" id="filter-overdue" class="filter-btn text-xs font-semibold px-4 py-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition flex items-center gap-1.5">
+                        <span>Retrasadas</span>
+                        <span id="filterOverdueBadge" class="hidden bg-rose-500 text-white px-1.5 py-0.5 rounded-full text-[10px]">0</span>
+                    </button>
+                    <button onclick="filterTasks('completed')" id="filter-completed" class="filter-btn text-xs font-semibold px-4 py-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
+                        Completadas
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <!-- Folder Filter Selector -->
+                    <select id="folderFilterSelect" onchange="renderTasks()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
+                        <option value="all">📂 Todas las carpetas</option>
+                        <!-- Dynamic folders will append here -->
+                    </select>
+
+                    <!-- Search Input -->
+                    <div class="relative w-full md:w-56">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                        <input type="text" id="searchInput" oninput="renderTasks()" placeholder="Buscar tarea en tiempo real..." class="w-full pl-8 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks Grid Container -->
+            <div id="tasksGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+            <!-- Empty State Container -->
+            <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center p-12 text-center bg-slate-900/20 border border-dashed border-slate-800 rounded-3xl">
+                <div class="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 mb-4 text-2xl">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+                <h3 class="text-base font-semibold text-slate-300">No hay tareas encontradas</h3>
+                <p class="text-xs text-slate-500 mt-1 max-w-sm">Crea una nueva tarea para sincronizarla al instante con tu equipo de trabajo.</p>
+                <button onclick="openModal('newTaskModal')" class="mt-4 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-xl transition shadow">
+                    + Crear Tarea Compartida
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB 2: FOLDERS & SECTIONS VIEW -->
+        <div id="foldersTab" class="tab-content hidden space-y-6">
+            <div class="flex items-center justify-between bg-slate-900/60 p-5 rounded-3xl border border-slate-800">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-folder-tree text-indigo-400"></i> Carpetas y Secciones del Equipo
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Organiza las tareas en diferentes áreas de trabajo o departamentos.</p>
+                </div>
+                <button onclick="openModal('newFolderModal')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2">
+                    <i class="fa-solid fa-folder-plus text-sm"></i>
+                    <span>Nueva Carpeta</span>
+                </button>
+            </div>
+
+            <!-- Folders Grid -->
+            <div id="foldersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+    </main>
+
+    <!-- MODAL: Configuración de Perfil / Marca -->
+    <div id="profileModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-user-pen text-indigo-400"></i> Tu Identificación de Equipo
+                </h3>
+                <button onclick="closeModal('profileModal')" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="handleSaveProfile(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Nombre Completo o Cargo *</label>
+                    <input type="text" id="inputUserName" required placeholder="Ej: Carlos (Ingeniero de Obra)" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500">
+                    <p class="text-[11px] text-slate-500 mt-1">Este nombre aparecerá adjunto a cada foto o avance que registres.</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Nombre de la Empresa o Aplicación</label>
+                    <input type="text" id="inputAppName" placeholder="Ej: Constructora Valdivia" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="pt-3 flex justify-end gap-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('profileModal')" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Crear Nueva Tarea -->
+    <div id="newTaskModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl my-8">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-plus-circle text-indigo-400"></i> Crear Tarea Compartida
+                </h3>
+                <button onclick="closeModal('newTaskModal')" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="newTaskForm" onsubmit="handleCreateTask(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Título de la Tarea / Proyecto *</label>
+                    <input type="text" id="taskTitle" required placeholder="Ej: Avance de cimentación o Instalaciones" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Descripción</label>
+                    <textarea id="taskDescription" rows="3" placeholder="Instrucciones o especificaciones para el equipo..." class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Carpeta / Sección *</label>
+                        <select id="taskFolderId" required class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                            <!-- Dynamic folder options -->
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Fecha y Hora Límite *</label>
+                        <input type="datetime-local" id="taskDeadline" required class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Progreso Inicial (%)</label>
+                    <div class="flex items-center gap-3">
+                        <input type="range" id="initialProgress" min="0" max="100" value="0" oninput="document.getElementById('initialProgVal').textContent = this.value + '%'" class="w-full accent-indigo-500">
+                        <span id="initialProgVal" class="text-xs font-semibold text-indigo-400 w-12 text-right">0%</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Fotografía o Registro Inicial (Opcional)</label>
+                    <input type="file" id="initialPhoto" accept="image/*" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600/20 file:text-indigo-400 hover:file:bg-indigo-600/30">
+                </div>
+
+                <div class="pt-4 flex justify-end gap-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('newTaskModal')" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 transition">Publicar Tarea en la Nube</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Crear Nueva Carpeta -->
+    <div id="newFolderModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-folder-plus text-indigo-400"></i> Nueva Carpeta / Sección
+                </h3>
+                <button onclick="closeModal('newFolderModal')" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form onsubmit="handleCreateFolder(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Nombre de Carpeta *</label>
+                    <input type="text" id="folderName" required placeholder="Ej: Obra Norte, Mantenimiento, Diseño" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Color Distintivo</label>
+                    <select id="folderColor" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500">
+                        <option value="indigo">💜 Índigo</option>
+                        <option value="emerald">💚 Esmeralda</option>
+                        <option value="amber">💛 Ámbar</option>
+                        <option value="rose">❤️ Rosa</option>
+                        <option value="sky">💙 Azul Cielo</option>
+                    </select>
+                </div>
+                <div class="pt-3 flex justify-end gap-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('newFolderModal')" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow">Guardar Carpeta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Registrar Avance Fotográfico -->
+    <div id="addProgressModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl my-8">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-camera text-indigo-400"></i>
+                    Añadir Avance Fotográfico en Línea
+                </h3>
+                <button onclick="closeModal('addProgressModal')" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="addProgressForm" onsubmit="handleSaveProgress(event)" class="p-6 space-y-4">
+                <input type="hidden" id="progressTaskId">
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Nuevo Porcentaje de Avance (%) *</label>
+                    <div class="flex items-center gap-3">
+                        <input type="range" id="newProgressPercentage" min="0" max="100" value="50" oninput="document.getElementById('newProgVal').textContent = this.value + '%'" class="w-full accent-indigo-500">
+                        <span id="newProgVal" class="text-sm font-bold text-indigo-400 w-12 text-right">50%</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Comentario o Nota del Avance</label>
+                    <textarea id="progressNote" rows="2" placeholder="Ej: Se instalaron 50m2 de piso y se hicieron pruebas..." class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Fotografía del Avance *</label>
+                    <div class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 rounded-2xl p-4 text-center transition bg-slate-950">
+                        <input type="file" id="progressPhoto" accept="image/*" required onchange="previewProgressImage(this)" class="hidden">
+                        <label for="progressPhoto" class="cursor-pointer flex flex-col items-center">
+                            <i id="uploadIcon" class="fa-solid fa-cloud-arrow-up text-2xl text-slate-500 mb-2"></i>
+                            <span id="uploadText" class="text-xs text-slate-400 font-medium">Subir foto desde cámara o archivos</span>
+                            <img id="photoPreview" class="hidden mt-3 max-h-40 rounded-xl object-cover border border-slate-700 shadow-md">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="pt-4 flex justify-end gap-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('addProgressModal')" class="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 transition">Sincronizar Avance</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Detalle de Tarea e Historial -->
+    <div id="taskDetailModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden p-4 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl my-8 max-h-[90vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                <div class="flex items-center gap-3">
+                    <span id="modalFolderName" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Carpeta</span>
+                    <h3 id="modalTaskTitle" class="text-lg font-bold text-white truncate max-w-md">Título</h3>
+                </div>
+                <button onclick="closeModal('taskDetailModal')" class="text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-6 flex-1">
+                <div id="modalOverdueWarning" class="hidden p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-3 text-rose-300 text-xs">
+                    <i class="fa-solid fa-triangle-exclamation text-base text-rose-400"></i>
+                    <div>
+                        <span class="font-bold">¡Atención! Tiempo Excedido.</span>
+                        <p class="text-rose-300/80">Esta tarea ha superado el tiempo asignado sin completarse.</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80 space-y-3">
+                    <p id="modalTaskDesc" class="text-sm text-slate-300 leading-relaxed">Sin descripción...</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs pt-2 border-t border-slate-800/60">
+                        <div>
+                            <span class="text-slate-500">Fecha Límite:</span>
+                            <p id="modalDeadline" class="font-semibold text-slate-200 mt-0.5">-</p>
+                        </div>
+                        <div>
+                            <span class="text-slate-500">Estado:</span>
+                            <p id="modalStatus" class="font-semibold text-slate-200 mt-0.5">-</p>
+                        </div>
+                        <div>
+                            <span class="text-slate-500">Creado por:</span>
+                            <p id="modalAuthor" class="font-semibold text-slate-200 mt-0.5">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-xs font-semibold">
+                        <span class="text-slate-300">Progreso General</span>
+                        <span id="modalProgressText" class="text-indigo-400">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden p-0.5 border border-slate-800">
+                        <div id="modalProgressBar" class="bg-gradient-to-r from-indigo-500 to-violet-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                            <i class="fa-solid fa-images text-indigo-400"></i> Historial Fotográfico de Equipo
+                        </h4>
+                        <button id="modalAddProgressBtn" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-1.5 rounded-xl transition shadow">
+                            + Subir Foto
+                        </button>
+                    </div>
+
+                    <div id="timelineContainer" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UI Message Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs">
+        <i id="toastIcon" class="fa-solid fa-cloud-arrow-up text-indigo-400 text-base"></i>
+        <span id="toastMessage font-medium">Sincronizando...</span>
+    </div>
+
+    <!-- FIREBASE SDK INTEGRATION -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Configuration & Initialization
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'task-management-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "demo", authDomain: "demo.firebaseapp.com", projectId: "demo", storageBucket: "demo", messagingSenderId: "0", appId: "1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Global State
+        window.tasks = [];
+        window.folders = [];
+        window.currentFilter = 'all';
+        window.currentUser = {
+            name: localStorage.getItem('tp_user_name') || 'Usuario ' + Math.floor(Math.random() * 899 + 100),
+            appName: localStorage.getItem('tp_app_name') || 'TaskProgress Cloud'
+        };
+        window.db = db;
+        window.appId = appId;
+
+        // Paths according to Mandate Rule 1
+        const tasksCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
+        const foldersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'folders');
+
+        // Authenticate User & Listen for Firestore Changes
+        async function initCloudSync() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.warn("Auth fallback", err);
+            }
+
+            // Realtime listener for Tasks
+            onSnapshot(tasksCollectionRef, (snapshot) => {
+                window.tasks = [];
+                snapshot.forEach((docSnap) => {
+                    window.tasks.push(docSnap.data());
+                });
+                // Sort tasks newest first
+                window.tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                window.renderTasks();
+                window.checkOverdueTasksAlerts();
+            }, (error) => {
+                console.error("Firestore tasks subscription error:", error);
+            });
+
+            // Realtime listener for Folders
+            onSnapshot(foldersCollectionRef, (snapshot) => {
+                window.folders = [];
+                snapshot.forEach((docSnap) => {
+                    window.folders.push(docSnap.data());
+                });
+
+                if (window.folders.length === 0) {
+                    createDefaultFolder();
+                } else {
+                    window.renderFolders();
+                    window.updateFolderSelects();
+                }
+            }, (error) => {
+                console.error("Firestore folders subscription error:", error);
+            });
+        }
+
+        async function createDefaultFolder() {
+            const defaultFolder = {
+                id: 'folder_general',
+                name: 'General',
+                color: 'indigo',
+                createdAt: new Date().toISOString()
+            };
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'folders', defaultFolder.id), defaultFolder);
+        }
+
+        // Initialize Cloud Sync on startup
+        initCloudSync();
+        window.updateProfileDisplay();
+    </script>
+
+    <script>
+        // --- HELPER FUNCTIONS & UI LISTENERS ---
+
+        function updateProfileDisplay() {
+            document.getElementById('headerAppName').textContent = window.currentUser.appName;
+            document.getElementById('headerUserName').textContent = window.currentUser.name;
+            document.getElementById('inputUserName').value = window.currentUser.name;
+            document.getElementById('inputAppName').value = window.currentUser.appName;
+        }
+
+        function handleSaveProfile(e) {
+            e.preventDefault();
+            const name = document.getElementById('inputUserName').value.trim();
+            const appName = document.getElementById('inputAppName').value.trim();
+
+            if (name) window.currentUser.name = name;
+            if (appName) window.currentUser.appName = appName;
+
+            localStorage.setItem('tp_user_name', window.currentUser.name);
+            localStorage.setItem('tp_app_name', window.currentUser.appName);
+
+            updateProfileDisplay();
+            closeModal('profileModal');
+            showToast('Perfil actualizado');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.className = "nav-tab text-xs font-semibold px-4 py-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition");
+
+            document.getElementById(tabId).classList.remove('hidden');
+            const btn = document.getElementById(`tab-${tabId}`);
+            if (btn) btn.className = "nav-tab text-xs font-semibold px-4 py-2 rounded-xl transition bg-indigo-600 text-white shadow";
+        }
+
+        // --- CLOUD FIRESTORE TASK ACTIONS ---
+
+        async function handleCreateTask(e) {
+            e.preventDefault();
+
+            const title = document.getElementById('taskTitle').value.trim();
+            const description = document.getElementById('taskDescription').value.trim();
+            const folderId = document.getElementById('taskFolderId').value;
+            const deadline = document.getElementById('taskDeadline').value;
+            const progress = parseInt(document.getElementById('initialProgress').value) || 0;
+            const photoInput = document.getElementById('initialPhoto');
+
+            const saveCloudTask = async (photoBase64 = null) => {
+                const taskId = 'task_' + Date.now();
+                const logs = [];
+                
+                if (progress > 0 || photoBase64) {
+                    logs.push({
+                        id: 'log_' + Date.now(),
+                        timestamp: new Date().toISOString(),
+                        percentage: progress,
+                        note: 'Inicio de la tarea',
+                        photo: photoBase64,
+                        author: window.currentUser.name
+                    });
+                }
+
+                const newTask = {
+                    id: taskId,
+                    title,
+                    description,
+                    folderId,
+                    deadline,
+                    progress,
+                    author: window.currentUser.name,
+                    createdAt: new Date().toISOString(),
+                    logs
+                };
+
+                try {
+                    const taskDocRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'tasks', taskId);
+                    await window.setDoc(taskDocRef, newTask);
+                    closeModal('newTaskModal');
+                    document.getElementById('newTaskForm').reset();
+                    showToast('Tarea publicada en la nube');
+                } catch (err) {
+                    showToast('Error al guardar en la nube');
+                    console.error(err);
+                }
+            };
+
+            if (photoInput.files && photoInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    saveCloudTask(event.target.result);
+                };
+                reader.readAsDataURL(photoInput.files[0]);
+            } else {
+                saveCloudTask(null);
+            }
+        }
+
+        async function handleSaveProgress(e) {
+            e.preventDefault();
+            const taskId = document.getElementById('progressTaskId').value;
+            const percentage = parseInt(document.getElementById('newProgressPercentage').value);
+            const note = document.getElementById('progressNote').value.trim();
+            const photoInput = document.getElementById('progressPhoto');
+
+            const task = window.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const saveLog = async (photoBase64) => {
+                const newLog = {
+                    id: 'log_' + Date.now(),
+                    timestamp: new Date().toISOString(),
+                    percentage: percentage,
+                    note: note || `Avance a ${percentage}%`,
+                    photo: photoBase64,
+                    author: window.currentUser.name
+                };
+
+                const updatedLogs = [newLog, ...(task.logs || [])];
+                const updatedTask = {
+                    ...task,
+                    progress: percentage,
+                    logs: updatedLogs
+                };
+
+                try {
+                    const taskDocRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'tasks', taskId);
+                    await window.setDoc(taskDocRef, updatedTask);
+                    closeModal('addProgressModal');
+                    showToast('Avance sincronizado con tu equipo');
+
+                    if (!document.getElementById('taskDetailModal').classList.contains('hidden')) {
+                        openTaskDetail(taskId);
+                    }
+                } catch (err) {
+                    showToast('Error al actualizar en la nube');
+                    console.error(err);
+                }
+            };
+
+            if (photoInput.files && photoInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    saveLog(event.target.result);
+                };
+                reader.readAsDataURL(photoInput.files[0]);
+            } else {
+                saveLog(null);
+            }
+        }
+
+        async function deleteTask(taskId) {
+            if (confirm('¿Eliminar esta tarea y todas sus fotos registradas para todo el equipo?')) {
+                try {
+                    const taskDocRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'tasks', taskId);
+                    await window.deleteDoc(taskDocRef);
+                    closeModal('taskDetailModal');
+                    showToast('Tarea eliminada');
+                } catch (err) {
+                    showToast('Error al eliminar');
+                }
+            }
+        }
+
+        // --- FOLDERS MANAGEMENT ---
+
+        async function handleCreateFolder(e) {
+            e.preventDefault();
+            const name = document.getElementById('folderName').value.trim();
+            const color = document.getElementById('folderColor').value;
+
+            if (!name) return;
+
+            const folderId = 'folder_' + Date.now();
+            const newFolder = {
+                id: folderId,
+                name,
+                color,
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                const folderDocRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'folders', folderId);
+                await window.setDoc(folderDocRef, newFolder);
+                closeModal('newFolderModal');
+                document.getElementById('folderName').value = '';
+                showToast('Carpeta creada en la nube');
+            } catch (err) {
+                showToast('Error al crear carpeta');
+            }
+        }
+
+        async function deleteFolder(folderId) {
+            if (window.folders.length <= 1) {
+                alert('Debes mantener al menos una carpeta activa.');
+                return;
+            }
+
+            if (confirm('¿Eliminar esta carpeta? Las tareas se reasignarán automáticamente a General.')) {
+                try {
+                    // Reassign tasks to first available folder
+                    const fallbackFolder = window.folders.find(f => f.id !== folderId);
+                    const tasksInFolder = window.tasks.filter(t => t.folderId === folderId);
+
+                    for (let task of tasksInFolder) {
+                        const taskDocRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'tasks', task.id);
+                        await window.setDoc(taskDocRef, { ...task, folderId: fallbackFolder.id });
+                    }
+
+                    // Delete Folder
+                    const folderDocRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'folders', folderId);
+                    await window.deleteDoc(folderDocRef);
+                    showToast('Carpeta eliminada');
+                } catch (err) {
+                    showToast('Error al eliminar la carpeta');
+                }
+            }
+        }
+
+        function updateFolderSelects() {
+            const folderFilter = document.getElementById('folderFilterSelect');
+            const taskFolderSelect = document.getElementById('taskFolderId');
+
+            const currentFilterVal = folderFilter.value;
+            folderFilter.innerHTML = '<option value="all">📂 Todas las carpetas</option>';
+            taskFolderSelect.innerHTML = '';
+
+            window.folders.forEach(f => {
+                folderFilter.innerHTML += `<option value="${f.id}">📁 ${f.name}</option>`;
+                taskFolderSelect.innerHTML += `<option value="${f.id}">📁 ${f.name}</option>`;
+            });
+
+            folderFilter.value = currentFilterVal || 'all';
+        }
+
+        function renderFolders() {
+            const grid = document.getElementById('foldersGrid');
+            grid.innerHTML = '';
+
+            window.folders.forEach(f => {
+                const folderTasks = window.tasks.filter(t => t.folderId === f.id);
+                const total = folderTasks.length;
+                const completed = folderTasks.filter(t => t.progress >= 100).length;
+                const avgProgress = total > 0 ? Math.round(folderTasks.reduce((acc, t) => acc + t.progress, 0) / total) : 0;
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between hover:border-slate-700 transition";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-lg">
+                                    📁
+                                </div>
+                                <h3 class="font-bold text-white text-base">${f.name}</h3>
+                            </div>
+                            <button onclick="deleteFolder('${f.id}')" class="text-xs text-slate-500 hover:text-rose-400 p-1">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                        <div class="space-y-2 text-xs text-slate-400">
+                            <div class="flex justify-between">
+                                <span>Tareas totales:</span>
+                                <span class="text-white font-medium">${total}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Completadas:</span>
+                                <span class="text-emerald-400 font-medium">${completed}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Progreso Promedio:</span>
+                                <span class="text-indigo-400 font-bold">${avgProgress}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800 flex justify-end">
+                        <button onclick="filterByFolder('${f.id}')" class="text-xs bg-slate-800 hover:bg-slate-700 text-indigo-300 px-3 py-1.5 rounded-xl transition">
+                            Ver Tareas →
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterByFolder(folderId) {
+            switchTab('tasksTab');
+            document.getElementById('folderFilterSelect').value = folderId;
+            renderTasks();
+        }
+
+        // --- OVERDUE ALERT LOGIC ---
+
+        function isTaskOverdue(task) {
+            if (task.progress >= 100) return false;
+            const deadlineDate = new Date(task.deadline);
+            return new Date() > deadlineDate;
+        }
+
+        function checkOverdueTasksAlerts() {
+            const overdueTasks = (window.tasks || []).filter(isTaskOverdue);
+            const overdueCount = overdueTasks.length;
+
+            const overdueBadge = document.getElementById('overdueBadgeContainer');
+            const globalBanner = document.getElementById('globalOverdueBanner');
+            const filterBadge = document.getElementById('filterOverdueBadge');
+
+            if (overdueCount > 0) {
+                overdueBadge.classList.remove('hidden');
+                document.getElementById('overdueCountText').textContent = `${overdueCount} Retraso${overdueCount > 1 ? 's' : ''}`;
+                
+                globalBanner.classList.remove('hidden');
+                document.getElementById('globalAlertMessage').textContent = 
+                    `¡Alerta de Equipo! Hay ${overdueCount} tarea(s) retrasada(s) cuya fecha límite expiró.`;
+
+                filterBadge.classList.remove('hidden');
+                filterBadge.textContent = overdueCount;
+            } else {
+                overdueBadge.classList.add('hidden');
+                globalBanner.classList.add('hidden');
+                filterBadge.classList.add('hidden');
+            }
+        }
+
+        // --- TASKS RENDERER ---
+
+        function filterTasks(filterType) {
+            window.currentFilter = filterType;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.className = "filter-btn text-xs font-semibold px-4 py-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition";
+            });
+
+            const activeBtn = document.getElementById(`filter-${filterType}`);
+            if (activeBtn) {
+                activeBtn.className = "filter-btn text-xs font-semibold px-4 py-2 rounded-xl transition bg-indigo-600 text-white shadow";
+            }
+
+            renderTasks();
+        }
+
+        function renderTasks() {
+            const grid = document.getElementById('tasksGrid');
+            const emptyState = document.getElementById('emptyState');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            const selectedFolder = document.getElementById('folderFilterSelect').value;
+
+            grid.innerHTML = '';
+            const allTasks = window.tasks || [];
+
+            let filtered = allTasks.filter(t => {
+                const matchesSearch = t.title.toLowerCase().includes(searchVal) || 
+                                     (t.description && t.description.toLowerCase().includes(searchVal));
+                const matchesFolder = selectedFolder === 'all' || t.folderId === selectedFolder;
+                
+                if (!matchesSearch || !matchesFolder) return false;
+
+                if (window.currentFilter === 'active') return t.progress < 100 && !isTaskOverdue(t);
+                if (window.currentFilter === 'completed') return t.progress >= 100;
+                if (window.currentFilter === 'overdue') return isTaskOverdue(t);
+                return true;
+            });
+
+            // Summary Stats
+            document.getElementById('statTotal').textContent = allTasks.length;
+            document.getElementById('statActive').textContent = allTasks.filter(t => t.progress < 100 && !isTaskOverdue(t)).length;
+            document.getElementById('statCompleted').textContent = allTasks.filter(t => t.progress >= 100).length;
+            document.getElementById('statOverdue').textContent = allTasks.filter(isTaskOverdue).length;
+
+            if (filtered.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            grid.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+
+            filtered.forEach(task => {
+                const overdue = isTaskOverdue(task);
+                const completed = task.progress >= 100;
+                
+                const logs = task.logs || [];
+                const lastLogWithPhoto = logs.find(l => l.photo);
+                const thumbnail = lastLogWithPhoto ? lastLogWithPhoto.photo : null;
+                const folderObj = window.folders.find(f => f.id === task.folderId);
+                const folderName = folderObj ? folderObj.name : 'General';
+
+                const card = document.createElement('div');
+                card.className = `group bg-slate-900 border ${overdue ? 'border-rose-500/50 bg-gradient-to-b from-rose-950/20 to-slate-900' : 'border-slate-800 hover:border-slate-700'} rounded-3xl p-5 flex flex-col justify-between transition-all duration-300 hover:shadow-xl relative overflow-hidden`;
+
+                const formattedDeadline = new Date(task.deadline).toLocaleString('es-ES', {
+                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+
+                card.innerHTML = `
+                    ${overdue ? `
+                        <div class="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider flex items-center gap-1 shadow">
+                            <i class="fa-solid fa-clock"></i> Excedida
+                        </div>
+                    ` : ''}
+
+                    <div>
+                        <div class="flex items-center justify-between mb-2 pr-14">
+                            <span class="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-800 text-indigo-400 border border-slate-700/50">
+                                📁 ${folderName}
+                            </span>
+                        </div>
+
+                        <h3 onclick="openTaskDetail('${task.id}')" class="font-bold text-slate-100 text-base group-hover:text-indigo-300 transition cursor-pointer line-clamp-1">
+                            ${task.title}
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-1 line-clamp-2">${task.description || 'Sin detalles.'}</p>
+
+                        ${thumbnail ? `
+                            <div onclick="openTaskDetail('${task.id}')" class="mt-3 relative h-32 rounded-2xl overflow-hidden cursor-pointer border border-slate-800 group-hover:opacity-95 transition">
+                                <img src="${thumbnail}" class="w-full h-full object-cover">
+                                <div class="absolute bottom-2 right-2 bg-slate-950/80 backdrop-blur-sm text-[10px] text-slate-300 px-2 py-0.5 rounded-md">
+                                    <i class="fa-solid fa-camera mr-1 text-indigo-400"></i> ${logs.filter(l => l.photo).length} foto(s)
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <div class="mt-4 flex items-center justify-between text-xs text-slate-400">
+                            <span class="flex items-center gap-1.5 ${overdue ? 'text-rose-400 font-semibold' : ''}">
+                                <i class="fa-regular fa-calendar"></i>
+                                Límite: ${formattedDeadline}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-4 border-t border-slate-800/80">
+                        <div class="flex justify-between items-center text-xs mb-1.5">
+                            <span class="font-medium text-slate-400">Progreso Equipo</span>
+                            <span class="font-bold ${completed ? 'text-emerald-400' : 'text-indigo-400'}">${task.progress}%</span>
+                        </div>
+                        
+                        <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800">
+                            <div class="${completed ? 'bg-emerald-500' : overdue ? 'bg-rose-500' : 'bg-gradient-to-r from-indigo-500 to-violet-500'} h-full rounded-full transition-all duration-300" style="width: ${task.progress}%"></div>
+                        </div>
+
+                        <div class="mt-4 flex items-center justify-between gap-2">
+                            <button onclick="openAddProgressModal('${task.id}')" class="flex-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2 rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-700/50">
+                                <i class="fa-solid fa-camera text-[10px] text-indigo-400"></i>
+                                <span>Subir Foto</span>
+                            </button>
+                            <button onclick="openTaskDetail('${task.id}')" class="text-xs bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 font-medium px-3 py-2 rounded-xl transition border border-indigo-500/20">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // --- TASK DETAIL MODAL ---
+
+        function openTaskDetail(taskId) {
+            const task = window.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const overdue = isTaskOverdue(task);
+            const folderObj = window.folders.find(f => f.id === task.folderId);
+            const folderName = folderObj ? folderObj.name : 'General';
+
+            document.getElementById('modalFolderName').textContent = `📁 ${folderName}`;
+            document.getElementById('modalTaskTitle').textContent = task.title;
+            document.getElementById('modalTaskDesc').textContent = task.description || 'Sin descripción guardada.';
+            document.getElementById('modalAuthor').textContent = task.author || 'Equipo';
+
+            const deadlineDate = new Date(task.deadline).toLocaleString('es-ES', {
+                dateStyle: 'medium', timeStyle: 'short'
+            });
+            document.getElementById('modalDeadline').textContent = deadlineDate;
+            
+            const statusText = task.progress >= 100 ? 'Completado' : (overdue ? 'Vencido / Excedido' : 'En Curso');
+            document.getElementById('modalStatus').textContent = statusText;
+            document.getElementById('modalStatus').className = `font-semibold mt-0.5 ${task.progress >= 100 ? 'text-emerald-400' : (overdue ? 'text-rose-400' : 'text-indigo-400')}`;
+
+            document.getElementById('modalProgressText').textContent = `${task.progress}%`;
+            document.getElementById('modalProgressBar').style.width = `${task.progress}%`;
+
+            const warningBanner = document.getElementById('modalOverdueWarning');
+            if (overdue) {
+                warningBanner.classList.remove('hidden');
+            } else {
+                warningBanner.classList.add('hidden');
+            }
+
+            document.getElementById('modalAddProgressBtn').onclick = () => {
+                closeModal('taskDetailModal');
+                openAddProgressModal(task.id);
+            };
+
+            const timeline = document.getElementById('timelineContainer');
+            timeline.innerHTML = '';
+            const logs = task.logs || [];
+
+            if (logs.length === 0) {
+                timeline.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">Sin registros fotográficos en la nube aún.</p>';
+            } else {
+                logs.forEach(log => {
+                    const logDate = new Date(log.timestamp).toLocaleString('es-ES', {
+                        dateStyle: 'medium', timeStyle: 'short'
+                    });
+
+                    const item = document.createElement('div');
+                    item.className = "bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-3";
+
+                    item.innerHTML = `
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
+                                ${log.percentage}% de progreso
+                            </span>
+                            <div class="text-right text-[11px] text-slate-500">
+                                <span class="font-semibold text-slate-300">${log.author || 'Miembro del Equipo'}</span> • ${logDate}
+                            </div>
+                        </div>
+                        ${log.note ? `<p class="text-xs text-slate-300 leading-relaxed">${log.note}</p>` : ''}
+                        ${log.photo ? `
+                            <div class="mt-2 rounded-xl overflow-hidden border border-slate-800 bg-slate-900 max-h-80">
+                                <img src="${log.photo}" alt="Evidencia de progreso" class="w-full h-full object-cover">
+                            </div>
+                        ` : ''}
+                    `;
+                    timeline.appendChild(item);
+                });
+            }
+
+            const deleteContainer = document.createElement('div');
+            deleteContainer.className = "pt-4 border-t border-slate-800 flex justify-end";
+            deleteContainer.innerHTML = `
+                <button onclick="deleteTask('${task.id}')" class="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-trash-can"></i> Eliminar Tarea para el Equipo
+                </button>
+            `;
+            timeline.appendChild(deleteContainer);
+
+            openModal('taskDetailModal');
+        }
+
+        function openAddProgressModal(taskId) {
+            const task = window.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            document.getElementById('progressTaskId').value = taskId;
+            document.getElementById('newProgressPercentage').value = task.progress;
+            document.getElementById('newProgVal').textContent = task.progress + '%';
+            document.getElementById('progressNote').value = '';
+            document.getElementById('progressPhoto').value = '';
+            document.getElementById('photoPreview').classList.add('hidden');
+            document.getElementById('uploadIcon').classList.remove('hidden');
+            document.getElementById('uploadText').textContent = 'Subir foto desde cámara o archivos';
+
+            openModal('addProgressModal');
+        }
+
+        function previewProgressImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('photoPreview');
+                    img.src = e.target.result;
+                    img.classList.remove('hidden');
+                    document.getElementById('uploadIcon').classList.add('hidden');
+                    document.getElementById('uploadText').textContent = 'Cambiar foto';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function openModal(id) {
+            if (id === 'newTaskModal') {
+                const defaultDeadline = new Date(Date.now() + 24 * 60 * 60 * 1000);
+                const isoDateTime = new Date(defaultDeadline.getTime() - (defaultDeadline.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                document.getElementById('taskDeadline').value = isoDateTime;
+            }
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
